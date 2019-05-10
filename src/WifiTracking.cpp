@@ -18,7 +18,7 @@ void showMetadata(SnifferPacket *snifferPacket)
             frameSubType != SUBTYPE_PROBE_REQUEST)
             return;
 
-        char addr[] = "00-00-00-00-00-00";
+        char addr[] = "00:00:00:00:00:00";
         getMAC(addr, snifferPacket->data, 10);
 
         for (int i = 0; i < 18; i++)
