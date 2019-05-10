@@ -7,6 +7,7 @@ typedef enum
 {
   DISCOVERY,
   IDLE,
+  HEARTBEAT,
   COLLECTING,
   SENDING
 } wifiTrackerState;
@@ -25,12 +26,28 @@ char command[64];
 
 unsigned long timerStart;
 unsigned long timerDelay = 10000;
+unsigned long timerHeartStart;
+unsigned long timerHeartDelay = 10000;
+unsigned long timerHeartTimeoutStart;
+unsigned long timerHeartTimeoutDelay = 30000;
 
 int macCount = 0;
 int macIndex = 0;
 
 bool receivedMessage = false;
 bool resendMessage = false;
+
+void MergeStrings(char *stringA, char *stringB, char **buffer)
+{
+  size_t sizeA = strlen(stringA);
+  size_t sizeB = strlen(stringB);
+  size_t size = sizeof(char) * (sizeA + sizeB + 1);
+
+  *buffer = (char *)malloc(size);
+  memcpy(*buffer, stringA, sizeA);
+  memcpy(*buffer + sizeA, stringB, sizeB);
+  (*buffer)[sizeA + sizeB] = '\0';
+}
 
 void setup()
 {
@@ -84,8 +101,15 @@ void loop()
   case DISCOVERY:
     if (eventState == DISCOVERD)
     {
-      SendMessage("NodeMcu");
+      char *node = "NodeMcu:";
+      uint32_t id = ESP.getChipId();
+      char idBuffer[64];
+      sprintf(idBuffer, "%d", id);
+      char* ptrMessage;
+      MergeStrings(node, idBuffer, &ptrMessage);
+      SendMessage(ptrMessage);
       Serial.println("");
+      free(ptrMessage);
     }
     else if (eventState == ACK)
     {
@@ -106,6 +130,25 @@ void loop()
       SendMessage("ACK");
       Serial.println("");
       state = SENDING;
+    }
+    else if (millis() - timerHeartStart > timerHeartDelay)
+    {
+      SendMessage("HEARTBEAT");
+      Serial.println("");
+      state = HEARTBEAT;
+      timerHeartStart = millis();
+    }
+    break;
+
+  case HEARTBEAT:
+    if (eventState == ACK)
+    {
+      state = IDLE;
+      timerHeartTimeoutStart = millis();
+    }
+    else if (millis() - timerHeartTimeoutStart > timerHeartTimeoutDelay)
+    {
+      state = DISCOVERY;
     }
     break;
 
@@ -142,16 +185,11 @@ void loop()
     {
       char *mac = "MAC:";
       char *address = GetMacAddress(macIndex);
-      size_t sizeA = strlen(mac);
-      size_t sizeB = strlen(address);
-      size_t size = sizeof(char) * (sizeA + sizeB + 1);
-      char *message = (char *)malloc(size);
-      memcpy(message, mac, sizeA);
-      memcpy(message + sizeA, address, sizeB);
-      message[sizeA + sizeB] = '\0';
-      SendMessage(message);
+      char *ptrMessage = NULL;
+      MergeStrings(mac, address, &ptrMessage);
+      SendMessage(ptrMessage);
       Serial.println("");
-      free(message);
+      free(ptrMessage);
       receivedMessage = false;
       resendMessage = false;
     }
