@@ -141,7 +141,9 @@ void loop()
     break;
 
   case HEARTBEAT:
-    if (eventState == ACK)
+  if (Serial.available() > 0)
+  {
+   if (eventState == ACK)
     {
       state = IDLE;
       timerHeartTimeoutStart = millis();
@@ -150,6 +152,7 @@ void loop()
     {
       state = DISCOVERY;
     }
+  }
     break;
 
   case COLLECTING:
