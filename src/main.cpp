@@ -153,6 +153,11 @@ void loop()
       state = DISCOVERY;
     }
   }
+  else
+  {
+    state = DISCOVERY;
+  }
+  
     break;
 
   case COLLECTING:
@@ -199,6 +204,7 @@ void loop()
     else if (macIndex >= macCount)
     {
       SendMessage("FINISH");
+      macIndex = 0;
       Serial.println("");
       state = IDLE;
     }
